@@ -14,6 +14,9 @@ from selenium.common.exceptions import WebDriverException
 
 logger = logging.getLogger("sortify.oauth")
 
+webconfig = webdriver.FirefoxOptions()
+webconfig.set_headless()
+
 
 class SpotifyOAuth():
     ''' Allows User OAuth 2.0 Requests to Spotify Web API '''
@@ -46,7 +49,7 @@ class SpotifyOAuth():
         password = input('Please Enter your Spotify Password: ')
 
         logger.trace('Opening Firefox Window')
-        browser = webdriver.Firefox()
+        browser = webdriver.Firefox(firefox_options=webconfig)
 
         logger.trace('Accessing Spotify Connect URL')
         browser.get('https://accounts.spotify.com/en/login')
@@ -70,7 +73,7 @@ class SpotifyOAuth():
         logger.trace('Clicking Login Button')
         login.click()
 
-        time.sleep(5)
+        time.sleep(2)
         logger.trace('Accessing Spotify Connect URL')
         try:
             browser.get(url)
@@ -90,6 +93,8 @@ class SpotifyOAuth():
 
         except WebDriverException as e:
             url = str(e).split('code%3D')[1].split('&c')[0]
+
+        browser.quit()
 
         return url
 
