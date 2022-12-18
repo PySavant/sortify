@@ -10,12 +10,13 @@ from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.firefox.options import Options
 
 
 logger = logging.getLogger("sortify.oauth")
 
-webconfig = webdriver.FirefoxOptions()
-webconfig.set_headless()
+webconfig = Options()
+webconfig.headless = True
 
 
 class SpotifyOAuth():
@@ -49,9 +50,9 @@ class SpotifyOAuth():
         password = input('Please Enter your Spotify Password: ')
 
         logger.trace('Opening Firefox Window')
-        browser = webdriver.Firefox(firefox_options=webconfig)
+        browser = webdriver.Firefox(options=webconfig)
 
-        logger.trace('Accessing Spotify Connect URL')
+        logger.trace('Accessing Spotify Account Login URL')
         browser.get('https://accounts.spotify.com/en/login')
 
         logger.trace('Locating Login Field: username')
