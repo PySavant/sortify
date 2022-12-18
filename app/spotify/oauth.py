@@ -1,4 +1,5 @@
 import os
+import time
 import base64
 import aiohttp
 import asyncio
@@ -8,6 +9,7 @@ from dotenv import load_dotenv
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import WebDriverException
 
 
 logger = logging.getLogger("sortify.oauth")
@@ -24,6 +26,8 @@ class SpotifyOAuth():
 
     def __init__(self, app):
         self.app = app
+
+        asyncio.run(self.authenticate())
 
     @staticmethod
     def getAuth(app) -> str:
@@ -45,7 +49,7 @@ class SpotifyOAuth():
         browser = webdriver.Firefox()
 
         logger.trace('Accessing Spotify Connect URL')
-        browser.get(url)
+        browser.get('https://accounts.spotify.com/en/login')
 
         logger.trace('Locating Login Field: username')
         user = browser.find_element(By.XPATH, '//*[@id="login-username"]')
@@ -60,23 +64,32 @@ class SpotifyOAuth():
         pword.send_keys(password)
 
         logger.trace('Locating Login Button')
-        login = browser.find_element(By.XPATH, '//*[@id="login-button"]')
+        login = browser.find_element(By.XPATH, '//*[@id="login-button"]/div[1]/p')
+
 
         logger.trace('Clicking Login Button')
         login.click()
 
+        time.sleep(5)
+        logger.trace('Accessing Spotify Connect URL')
         try:
-            logger.trace('Locating Authorization Button')
-            authorize = browser.find_element(By.XPATH, '/html/body/div/div/div[2]/div/div/div[3]/button')
+            browser.get(url)
 
-        except Exception as e:
-            logger.warning('No Button Found: Assuming Prior Authorization')
-            url = browser.current_url
+            try:
+                logger.trace('Locating Authorization Button')
+                authorize = browser.find_element(By.XPATH, '/html/body/div/div/div[2]/div/div/div[3]/button')
 
-        else:
-            logger.trace('Clicking Authorization Button')
-            authorize.click()
-            url = browser.current_url
+            except Exception as e:
+                logger.warning('No Button Found: Assuming Prior Authorization')
+                url = browser.current_url
+
+            else:
+                logger.trace('Clicking Authorization Button')
+                authorize.click()
+                url = browser.current_url
+
+        except WebDriverException as e:
+            url = str(e).split('code%3D')[1].split('&c')[0]
 
         return url
 
@@ -103,12 +116,12 @@ class SpotifyOAuth():
 
         headers = {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': f'Basic {self.getAuth(self.app)}'
+            'Authorization': f'Basic {self.getAuth(self.app).decode("ascii")}'
         }
 
         if type == 'authorization':
             data = {
-                'code': 'code',
+                'code': code,
                 'redirect_uri': self.app.redirect,
                 'grant_type': 'authorization_code'
             }
@@ -122,8 +135,9 @@ class SpotifyOAuth():
         async with aiohttp.ClientSession(headers=headers) as session:
             async with session.post(self.token_url, data=data) as request:
                 response = await request.json()
+
         try:
-            self.token = response['access_token']
+            self.token = f'Bearer {response["access_token"]}'
 
         except KeyError:
             logger.fatal('Unexpected Error -> Invalid Response Key: "access_token"')
@@ -142,7 +156,6 @@ class SpotifyOAuth():
 
             logger.info('Authorizing Sortify to Access User Spotify Account')
             redirect = self.login(url)
-
             logger.trace('Ensuring a Successful Authorization Response')
 
             try:
@@ -150,8 +163,11 @@ class SpotifyOAuth():
             except AssertionError:
                 logger.fatal('Error: Inccorect Authorization Response')
             else:
-                logger.debug('Retrieving User Authorization Code')
-                code = redirect.split('?')[1].split('=')[1]
+                if 'code' in redirect:
+                    logger.debug('Retrieving User Authorization Code')
+                    code = redirect.split('?')[1].split('=')[1]
+                else:
+                    code = redirect
 
             logger.debug('Exchanging Auth Code for Access Token')
             token = await self.getToken(code=code, type='authorization')
@@ -163,5 +179,3 @@ class SpotifyOAuth():
             logger.info('Authorization Successful')
 
         return
-
-    
