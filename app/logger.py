@@ -35,7 +35,7 @@ class Config():
 
         logger = logging.getLogger("sortify")
         logger.propagate = False
-        logger.setLevel("TRACE")
+        logger.setLevel("DEBUG")
 
         console = logging.StreamHandler()
         console.setLevel("TRACE")
