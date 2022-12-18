@@ -33,7 +33,7 @@ class Config():
     def setLogger():
         Config.addLoggingLevel('TRACE', logging.DEBUG - 5)
 
-        logger = logging.getLogger("sortipy")
+        logger = logging.getLogger("sortify")
         logger.propagate = False
         logger.setLevel("TRACE")
 
