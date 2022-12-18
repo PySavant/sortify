@@ -26,6 +26,7 @@ class Sortify(BaseSortify):
 
         self.logger = logger
         self.library = []
+        self.userID = None
 
     # Operations
 
@@ -110,10 +111,13 @@ class Sortify(BaseSortify):
             url = self._create
             playlist = {
                 'name': name,
+                'description': name,
+                'public': "false"
             }
 
             self.logger.debug(f'Creating Playlist: {name}')
-            async with session.post(url.format(self.userID), data=playlist) as request:
+
+            async with session.post(url.format(self.userID), data=json.dumps(playlist)) as request:
                 response = await request.json()
 
             playlistid = response['id']
@@ -128,8 +132,8 @@ class Sortify(BaseSortify):
                 data = {"uris": chunk}
 
                 self.logger.trace(f'Adding {len(chunk)} songs to playlist')
-                await session.post(url.format(playlistid), data=data)
-
+                await session.post(url.format(playlistid), data=json.dumps(data))
+                
                 progress = (size / len(songs)) * 100
                 remaining = (len(songs) - size) / 200
 
@@ -179,7 +183,12 @@ class Sortify(BaseSortify):
         self.logger.info('Update Complete')
 
     async def generate(self):
-        genres = {genre: [] for genre in {song['genres'] for song in self.library}}
+        genres = {}
+
+        for song in self.library:
+                for genre in song['genres']:
+                    genres.update({genre: []})
+
         self.logger.debug(f'Identified {len(genres)} unique genres')
 
         self.logger.info('Building Playlists')

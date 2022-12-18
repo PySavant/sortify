@@ -9,7 +9,7 @@ class BaseSortify():
     _artists: str = 'https://api.spotify.com/v1/artists?ids={}'
     _userid: str = 'https://api.spotify.com/v1/me'
     _create: str = 'https://api.spotify.com/v1/users/{}/playlists'
-    _addsongs: str = 'https://api.spotify.com/v1/playlists/playlist/{}/tracks'
+    _addsongs: str = 'https://api.spotify.com/v1/playlists/{}/tracks'
 
     file: str = '/home/savant/Desktop/sortify/app/data/library.json'
 
