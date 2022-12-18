@@ -34,10 +34,12 @@ class Sortify(BaseSortify):
         with open(self.file, 'r') as file:
             songs = json.load(file)
 
-        self.logger.trace('Identifying Unique Artists')
-        artists = list( {song['aritst'] for song in songs} )
+        self.library = songs
 
-        self.logger.info(f'Found {len(_artists)} unique artists')
+        self.logger.trace('Identifying Unique Artists')
+        artists = list( {song['artist'] for song in songs} )
+
+        self.logger.info(f'Found {len(artists)} unique artists')
 
         return artists
 
@@ -66,12 +68,13 @@ class Sortify(BaseSortify):
                 async with session.get(url.format(offset)) as request:
                     response = await request.json()
 
-    async def _genres(self):
+    async def _genres(self, *, headers: dict = {}):
         _artists = self._artists()
 
         artists = {}
+        url = super()._artists
 
-        async with aiohttp.ClientSession(headers=header) as session:
+        async with aiohttp.ClientSession(headers=headers) as session:
             chunks = [','.join(chunk) for chunk in self._chunk(_artists)]
 
             for chunk in chunks:
@@ -79,7 +82,7 @@ class Sortify(BaseSortify):
                     response = await request.json()
 
                 for artist in super().getArtists(response['artists']):
-                    artists.update(artist)
+                    artists[artist["id"]] = artist["genres"]
 
                 progress = len(artists)/len(_artists) * 100
                 remaining = (len(_artists) - len(artists)) / 6000
@@ -99,7 +102,7 @@ class Sortify(BaseSortify):
         async with aiohttp.ClientSession(headers=header) as session:
             if not self.userID:
                 self.logger.debug('Fetching User ID')
-                async with session.get(self.userid) as request:
+                async with session.get(self._userid) as request:
                     response = await request.json()
 
                 self.userID = response['id']
@@ -163,7 +166,7 @@ class Sortify(BaseSortify):
         }
 
         self.logger.info('Collecting Genre Information')
-        artists = await self._genres()
+        artists = await self._genres(headers=header)
 
         self.logger.info('Updating Library')
 
